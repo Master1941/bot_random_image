@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import CommandHandler, Filters, MessageHandler, Updater
 
+from log_execution import log_execution, logging
+
 load_dotenv()
 
 
@@ -12,23 +14,29 @@ token = os.getenv("TELEGRAM_TOKEN")
 URL = os.getenv("URL", "https://api.thecatapi.com/v1/images/search")
 
 
+@log_execution
 def get_new_image():
     """Делать запросы к thecatapi.com."""
     try:
         response = requests.get(URL)
-        response = response.json()
-        random_cat = response[0].get("url")
-    except Exception as error:
-        print(error)
+    except Exception:
+        logging.exception("Ошибка при запросе к основному API")
+        # присылает фото собачки
+        new_url = "https://api.thedogapi.com/v1/images/search"
+        response = requests.get(new_url)
+    response = response.json()
+    random_cat = response[0].get("url")
     return random_cat
 
 
+@log_execution
 def new_cat(update, context):
     """На запрос /newcat отправляет новую картинку с котиком."""
     chat = update.effective_chat
     context.bot.send_photo(chat.id, get_new_image())
 
 
+@log_execution
 def wake_up(update, context):
     """На запрос /start отправляет картинку с котиком."""
     chat = update.effective_chat
@@ -45,6 +53,7 @@ def wake_up(update, context):
     context.bot.send_photo(chat.id, get_new_image())
 
 
+@log_execution
 def say_hi(update, context):
     """На любое сообщение отправляет приветствие."""
     chat = update.effective_chat
@@ -59,6 +68,7 @@ def say_hi(update, context):
     )
 
 
+@log_execution
 def main():
     """главная функция."""
     updater = Updater(token)
